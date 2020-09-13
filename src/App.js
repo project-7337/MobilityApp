@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import "./App.css";
 
 import {
@@ -32,61 +33,58 @@ import { KIBANA_METRICS } from "./utils/raw_data";
 
 const dateFormatter = timeFormatter(niceTimeFormatByDay(1));
 
-const options = [
-  {
-    label: 'Titan',
-    'data-test-subj': 'titanOption',
-  },
-  {
-    label: 'Enceladus',
-  },
-  {
-    label: 'Mimas',
-  },
-  {
-    label: 'Dione',
-  },
-  {
-    label: 'Iapetus',
-  },
-  {
-    label: 'Phoebe',
-  },
-  {
-    label: 'Rhea',
-  },
-  {
-    label:
-      "Pandora is one of Saturn's moons, named for a Titaness of Greek mythology",
-  },
-  {
-    label: 'Tethys',
-  },
-  {
-    label: 'Hyperion',
-  },
-];
-
 function App() {
-  const [selectedOptions, setSelected] = useState([options[2]]);
   const [formElements, setFormElements] = useState({
     loading: false
   });
+  const [selectedCountry, setSelectedCountry] = useState();
+  const [selectedRegion, setSelectedRegion] = useState();
+  const [regionList, setRegionList] = useState();
+  const [countryList, setCountryList] = useState();
+  const [country, setCountry] = useState(false);
+  const [regions, setRegions] = useState(false);
 
-  const onChange = selectedOptions => {
-    // We should only get back either 0 or 1 options.
-    setSelected(selectedOptions);
+  const onRegionChange = region => {
+    setSelectedRegion(region);
     setFormElements(formElements => ({...formElements, loading: true}));
     setTimeout(() => {
       setFormElements(formElements => ({...formElements, loading: false}));
     }, 2000);
   };
 
+  const onCountryChange = country => {
+    async function fetchData() {
+      setRegions(true);
+      let regionsList = [];
+      if(undefined !== country && undefined !== country[0]) {
+        var response = await axios.get(process.env.REACT_APP_RegionURL+"RegionHandler?country="+country[0].label);
+        response.data.subregions.forEach((ele) => {
+          regionsList.push({
+            label: ele
+          });
+        });
+      }
+      setRegionList(regionsList);
+      setRegions(false);
+    }
+    fetchData();
+    setSelectedCountry(country);
+  }
+
   React.useEffect(() => {
-    setFormElements(formElements => ({...formElements, loading: true}));
-    setTimeout(() => {
-      setFormElements(formElements => ({...formElements, loading: false}));
-    }, 2000);
+    async function fetchData() {
+      setCountry(true);
+      const response = await axios.get(process.env.REACT_APP_CountryURL+"countryHandler");
+      let countryList = [];
+      response.data.forEach((ele) => {
+        countryList.push({
+          label: ele
+        });
+      });
+      setCountryList(countryList);
+      setCountry(false);
+    }
+    fetchData();
   }, []);
 
   return (
@@ -104,6 +102,7 @@ function App() {
                 iconSize="xl"
                 iconType="logoGithub"
                 onClick={() => window.open('https://github.com/neo7337/MobilityApp')}
+                aria-label="homepage"
               />
             </EuiFlexItem>
           </EuiPageHeaderSection>
@@ -111,12 +110,24 @@ function App() {
         <EuiPageContent>
           <EuiPageContentHeader>
             <EuiComboBox
-              placeholder="Select a single option"
-              fullWidth="true"
+              placeholder="Select Country"
+              fullWidth={true}
               singleSelection={{ asPlainText: true }}
-              options={options}
-              selectedOptions={selectedOptions}
-              onChange={onChange}
+              options={countryList}
+              selectedOptions={selectedCountry}
+              onChange={onCountryChange}
+              isLoading={country}
+            />
+            </EuiPageContentHeader>
+            <EuiPageContentHeader>
+            <EuiComboBox
+              placeholder="Select Subregion"
+              fullWidth={true}
+              singleSelection={{ asPlainText: true }}
+              options={regionList}
+              selectedOptions={selectedRegion}
+              onChange={onRegionChange}
+              isLoading={regions}
             />
           </EuiPageContentHeader>
           { formElements.loading && <EuiPageContentBody>
