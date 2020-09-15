@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import "./App.css";
+import url from "./config";
 
 import {
   Axis,
@@ -57,7 +58,7 @@ function App() {
       setRegions(true);
       let regionsList = [];
       if(undefined !== country && undefined !== country[0]) {
-        var response = await axios.get(process.env.REACT_APP_RegionURL+"RegionHandler?country="+country[0].label);
+        var response = await axios.get(url.apiUrl+"regionhandler?country="+country[0].label);
         response.data.subregions.forEach((ele) => {
           regionsList.push({
             label: ele
@@ -74,7 +75,7 @@ function App() {
   React.useEffect(() => {
     async function fetchData() {
       setCountry(true);
-      const response = await axios.get(process.env.REACT_APP_CountryURL+"countryHandler");
+      const response = await axios.get(url.apiUrl+"countryHandler");
       let countryList = [];
       response.data.forEach((ele) => {
         countryList.push({
