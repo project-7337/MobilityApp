@@ -106,3 +106,5 @@ dist
 yarn.lock
 
 src/utils/*
+
+build/*
