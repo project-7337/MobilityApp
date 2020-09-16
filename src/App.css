@@ -6,3 +6,8 @@
 .chart-body {
   height: 500px;
 }
+
+.loading-chart {
+  text-align: center;
+  height: 500px;
+}
