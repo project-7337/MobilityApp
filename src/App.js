@@ -8,12 +8,10 @@ import {
   Chart,
   CurveType,
   LineSeries,
-  niceTimeFormatByDay,
   Position,
   ScaleType,
   Settings,
-  timeFormatter,
-} from "@elastic/charts"
+} from "@elastic/charts";
 
 import {
   EuiPage,
@@ -26,42 +24,53 @@ import {
   EuiButtonIcon,
   EuiPageHeader,
   EuiPageHeaderSection,
-  EuiButtonEmpty,
+  EuiLoadingChart,
   EuiTitle,
 } from "@elastic/eui";
 
-import { KIBANA_METRICS } from "./utils/raw_data";
-
-const dateFormatter = timeFormatter(niceTimeFormatByDay(1));
-
 function App() {
   const [formElements, setFormElements] = useState({
-    loading: false
+    loading: false,
   });
   const [selectedCountry, setSelectedCountry] = useState();
   const [selectedRegion, setSelectedRegion] = useState();
   const [regionList, setRegionList] = useState();
   const [countryList, setCountryList] = useState();
+  const [graphData, setGraphData] = useState({});
   const [country, setCountry] = useState(false);
   const [regions, setRegions] = useState(false);
 
-  const onRegionChange = region => {
+  const onRegionChange = (region) => {
+    async function fetchData() {
+      setFormElements((formElements) => ({ ...formElements, loading: true }));
+      if (undefined !== region && undefined !== region[0]) {
+        const response = await axios.get(
+          url.apiUrl +
+            "graphhandler?country=" +
+            selectedCountry[0].label +
+            "&region=" +
+            region[0].label
+        );
+        setGraphData(response);
+      }
+      setFormElements((formElements) => ({ ...formElements, loading: false }));
+    }
+    fetchData();
     setSelectedRegion(region);
-    setFormElements(formElements => ({...formElements, loading: true}));
-    setTimeout(() => {
-      setFormElements(formElements => ({...formElements, loading: false}));
-    }, 2000);
   };
 
-  const onCountryChange = country => {
+  const onCountryChange = (country) => {
     async function fetchData() {
       setRegions(true);
+      setSelectedRegion();
       let regionsList = [];
-      if(undefined !== country && undefined !== country[0]) {
-        var response = await axios.get(url.apiUrl+"regionhandler?country="+country[0].label);
+      if (undefined !== country && undefined !== country[0]) {
+        var response = await axios.get(
+          url.apiUrl + "regionhandler?country=" + country[0].label
+        );
         response.data.subregions.forEach((ele) => {
           regionsList.push({
-            label: ele
+            label: ele,
           });
         });
       }
@@ -70,20 +79,26 @@ function App() {
     }
     fetchData();
     setSelectedCountry(country);
-  }
+  };
 
   React.useEffect(() => {
     async function fetchData() {
+      setFormElements((formElements) => ({ ...formElements, loading: true }));
       setCountry(true);
-      const response = await axios.get(url.apiUrl+"countryHandler");
+      const response = await axios.get(url.apiUrl + "countryHandler");
       let countryList = [];
       response.data.forEach((ele) => {
         countryList.push({
-          label: ele
+          label: ele,
         });
       });
       setCountryList(countryList);
+      const graphData = await axios.get(
+        url.apiUrl + "graphhandler?country=india&region=all"
+      );
+      setGraphData(graphData);
       setCountry(false);
+      setFormElements((formElements) => ({ ...formElements, loading: false }));
     }
     fetchData();
   }, []);
@@ -102,7 +117,9 @@ function App() {
               <EuiButtonIcon
                 iconSize="xl"
                 iconType="logoGithub"
-                onClick={() => window.open('https://github.com/neo7337/MobilityApp')}
+                onClick={() =>
+                  window.open("https://github.com/neo7337/MobilityApp")
+                }
                 aria-label="homepage"
               />
             </EuiFlexItem>
@@ -119,8 +136,8 @@ function App() {
               onChange={onCountryChange}
               isLoading={country}
             />
-            </EuiPageContentHeader>
-            <EuiPageContentHeader>
+          </EuiPageContentHeader>
+          <EuiPageContentHeader>
             <EuiComboBox
               placeholder="Select Subregion"
               fullWidth={true}
@@ -131,81 +148,65 @@ function App() {
               isLoading={regions}
             />
           </EuiPageContentHeader>
-          { formElements.loading && <EuiPageContentBody>
-            <EuiButtonEmpty
-              onClick={() => window.alert('Button clicked')}
-              isLoading
-              iconSide="right">
-              Loading
-            </EuiButtonEmpty>
-          </EuiPageContentBody>}
-          { !formElements.loading && <EuiPageContentBody className="chart-body">
-            <Chart>
-              <Settings showLegend showLegendExtra legendPosition={Position.Right} />
-              <Axis id="bottom" position={Position.Bottom} showOverlappingTicks tickFormat={dateFormatter} />
-              <Axis
-                id="left"
-                title={KIBANA_METRICS.metrics.kibana_os_load[0].metric.title}
-                position={Position.Left}
-                tickFormat={(d) => `${Number(d).toFixed(0)}%`}
-              />
+          {formElements.loading && (
+            <EuiPageContentBody className="loading-chart">
+              <EuiLoadingChart size="xl" />
+            </EuiPageContentBody>
+          )}
+          {!formElements.loading && (
+            <EuiPageContentBody className="chart-body">
+              <Chart>
+                <Settings
+                  showLegend
+                  showLegendExtra
+                  legendPosition={Position.Right}
+                />
+                <Axis id="bottom" position={Position.Bottom} />
+                <Axis
+                  id="left"
+                  title={
+                    undefined !== graphData.data &&
+                    graphData.data.subregion +
+                      " (" +
+                      graphData.data.country +
+                      ")"
+                  }
+                  position={Position.Left}
+                  tickFormat={(d) => `${Number(d).toFixed(0)}%`}
+                />
 
-              <LineSeries
-                id="monotone x"
-                xScaleType={ScaleType.Time}
-                yScaleType={ScaleType.Linear}
-                xAccessor={0}
-                yAccessors={[1]}
-                data={KIBANA_METRICS.metrics.kibana_os_load[0].data}
-                curve={CurveType.CURVE_MONOTONE_X}
-              />
-              <LineSeries
-                id="basis"
-                xScaleType={ScaleType.Time}
-                yScaleType={ScaleType.Linear}
-                xAccessor={0}
-                yAccessors={[1]}
-                data={KIBANA_METRICS.metrics.kibana_os_load[0].data}
-                curve={CurveType.CURVE_BASIS}
-              />
-              <LineSeries
-                id="cardinal"
-                xScaleType={ScaleType.Time}
-                yScaleType={ScaleType.Linear}
-                xAccessor={0}
-                yAccessors={[1]}
-                data={KIBANA_METRICS.metrics.kibana_os_load[0].data}
-                curve={CurveType.CURVE_CARDINAL}
-              />
-              <LineSeries
-                id="catmull rom"
-                xScaleType={ScaleType.Time}
-                yScaleType={ScaleType.Linear}
-                xAccessor={0}
-                yAccessors={[1]}
-                data={KIBANA_METRICS.metrics.kibana_os_load[0].data}
-                curve={CurveType.CURVE_CATMULL_ROM}
-              />
-              <LineSeries
-                id="natural"
-                xScaleType={ScaleType.Time}
-                yScaleType={ScaleType.Linear}
-                xAccessor={0}
-                yAccessors={[1]}
-                data={KIBANA_METRICS.metrics.kibana_os_load[0].data}
-                curve={CurveType.CURVE_NATURAL}
-              />
-              <LineSeries
-                id="linear"
-                xScaleType={ScaleType.Time}
-                yScaleType={ScaleType.Linear}
-                xAccessor={0}
-                yAccessors={[1]}
-                data={KIBANA_METRICS.metrics.kibana_os_load[0].data}
-                curve={CurveType.LINEAR}
-              />
-            </Chart>
-          </EuiPageContentBody>}
+                <LineSeries
+                  id="driving"
+                  xScaleType={ScaleType.Time}
+                  yScaleType={ScaleType.Linear}
+                  xAccessor={0}
+                  yAccessors={[1]}
+                  data={
+                    undefined !== graphData.data &&
+                    graphData.data.data.map((d) => {
+                      return [d.date, d.driving];
+                    })
+                  }
+                  curve={CurveType.CURVE_MONOTONE_X}
+                />
+
+                <LineSeries
+                  id="walking"
+                  xScaleType={ScaleType.Time}
+                  yScaleType={ScaleType.Linear}
+                  xAccessor={0}
+                  yAccessors={[1]}
+                  data={
+                    undefined !== graphData.data &&
+                    graphData.data.data.map((d) => {
+                      return [d.date, d.walking];
+                    })
+                  }
+                  curve={CurveType.CURVE_MONOTONE_X}
+                />
+              </Chart>
+            </EuiPageContentBody>
+          )}
         </EuiPageContent>
       </EuiPageBody>
     </EuiPage>
