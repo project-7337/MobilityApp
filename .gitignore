@@ -108,3 +108,5 @@ yarn.lock
 src/utils/*
 
 build/*
+
+.idea
