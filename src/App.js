@@ -26,9 +26,10 @@ import {
   EuiPageHeaderSection,
   EuiLoadingChart,
   EuiTitle,
+  EuiSwitch
 } from "@elastic/eui";
 
-function App() {
+function App(props) {
   const [formElements, setFormElements] = useState({
     loading: false,
   });
@@ -39,6 +40,33 @@ function App() {
   const [graphData, setGraphData] = useState({});
   const [country, setCountry] = useState(false);
   const [regions, setRegions] = useState(false);
+
+  const [state, setState] = React.useState({
+    searchValue: "",
+    themeSwitch: localStorage.getItem("ThemeSwitch") === "true"
+  })
+
+  const changeTheme = e => {
+    if (e.target.checked === false) {
+      console.log("light here", localStorage.getItem("ThemeSwitch"));
+
+      localStorage.setItem("ThemeSwitch", false);
+
+      props.setTheme("light");
+    } else {
+      console.log("dark here", localStorage.getItem("ThemeSwitch"));
+
+      localStorage.setItem("ThemeSwitch", true);
+
+      props.setTheme("dark");
+    }
+  };
+
+  const searchValueChange = e => {
+    setState({
+      searchValue: e.target.value
+    });
+  };
 
   const onRegionChange = (region) => {
     async function fetchData() {
@@ -107,12 +135,19 @@ function App() {
     <EuiPage>
       <EuiPageBody component="div">
         <EuiPageHeader>
-          <EuiPageHeaderSection>
+          <EuiPageHeaderSection> 
             <EuiTitle size="l">
               <h1>MobilityUI</h1>
             </EuiTitle>
           </EuiPageHeaderSection>
           <EuiPageHeaderSection>
+            <EuiFlexItem grow={false}>
+            <EuiSwitch
+                  label="light/dark"
+                  checked={state.themeSwitch}
+                  onChange={changeTheme}
+                />
+              </EuiFlexItem>
             <EuiFlexItem grow={false}>
               <EuiButtonIcon
                 iconSize="xl"
